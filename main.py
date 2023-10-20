@@ -8,7 +8,7 @@ class Book(BaseModel):
     isbn: str
     author: str
     title: str
-    pages: int
+    pages: int | None
 
 # mit ID (zum Abfragen)
 class BookGet(Book):
@@ -31,7 +31,7 @@ def get_con():
 @app.get("/")
 def read_root():
     """User Begrüßung."""
-    return "Hello User!"
+    return {"message": "Hello User!"}
 
 
 @app.get("/books")
@@ -66,7 +66,7 @@ def read_book(id: int, con: sqlite3.Connection = Depends(get_con)):
     return book
 
 
-@app.post("/books/{id}")
+@app.post("/books/{id}", status_code=201)
 def post_book(book: Book, con: sqlite3.Connection = Depends(get_con)):
     """Buch hinzufügen"""
     cursor = con.cursor()
