@@ -73,10 +73,15 @@ def read_book(id: int, con: sqlite3.Connection = Depends(get_con)):
             """,
             [id],
         ).fetchall()
-        book = BookGet(
-            book_id=book[0], isbn=book[1], author=book[2], title=book[3], pages=book[4]
-        )
-        return book
+
+        if book:
+            # Falls Buch gefunden, in Pydantic-Instanz umwandeln
+            book = BookGet(
+                book_id=book[0], isbn=book[1], author=book[2], title=book[3], pages=book[4]
+            )
+            return book
+        else:
+            return {"message": "Buch nicht gefunden."}
     except sqlite3.Error as e:
         return {"message": f"SQL Fehler: {e}"}
     finally:
@@ -100,12 +105,14 @@ def post_book(book: Book, con: sqlite3.Connection = Depends(get_con)):
         )
         con.commit()
         result = {"added": book}
-    except sqlite3.Error as e:  # Wenn SQL-Fehler, dann...
-        con.rollback()  # Aktion rükgängig machen
-        # JSON-Fehlermeldung zurpckgeben (wird von FastAPI geregelt, man muss den Fehler nur ausrufen)
+    except sqlite3.Error as e: 
+        con.rollback() 
+        # JSON-Fehlermeldung zurückgeben
+        # (wird von FastAPI geregelt, man muss den Fehler nur ausrufen)
+        # Lässt sich mit exception_handler auch global automatisieren
         raise HTTPException(status_code=400, detail=f"SQL Error: {e}")
     finally:
-        # Egal ob es geklappt hat, die Verbindung am ende wieder schließen
+        # Egal ob es geklappt hat, die Verbindung am Ende wieder schließen
         cursor.close()
         con.close()
 
@@ -163,8 +170,7 @@ def delete_book(id: int, con: sqlite3.Connection = Depends(get_con)):
     return result
 
 
-# Falls das Skript direkt ausgeführt wird, soll uvicorn importiert werden und der Webserver gestartet werden.
 if __name__ == "__main__":
+    # Uvicorn wird nur importiert, wenn das Skript direkt ausgeführt wird.
     import uvicorn
-
     uvicorn.run("main:app", reload=True, port=8000)
