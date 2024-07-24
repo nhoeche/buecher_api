@@ -10,21 +10,19 @@ class Book(BaseModel):
     title: str
     pages: int | None
 
+
 # mit ID (zum Abfragen)
 class BookGet(Book):
     book_id: int
 
 
 # App erstellen
-app = FastAPI(title="Super Bücher API",
-              description="Made by Nils",
-              version="0.1")
+app = FastAPI(title="Super Bücher API", description="Made by Nils", version="0.1")
 
 
 # Funktion zum SQL-Verbindung generieren
 def get_con():
     return sqlite3.connect("buecher.sqlite")
-
 
 
 # ENDPUNKTE
@@ -39,10 +37,20 @@ def read_books(con: sqlite3.Connection = Depends(get_con)):
     """Alle Bücher zurückgeben."""
     cursor = con.cursor()  # Cursor erstellen
 
-    # Daten abfragen und in Dictionary umwandeln (damit wir json mit Schlüsselnamen zurückgeben)
+    # Daten abfragen und in Pydantic-Instanzen umwandeln
+    # (damit json mit Schlüsselnamen zurückgegeben werden kann)
     try:
         books = cursor.execute("SELECT * FROM buch").fetchall()
-        books = [BookGet(book_id=book[0], isbn=book[1], author=book[2], title=book[3], pages=book[4]) for book in books]
+        books = [
+            BookGet(
+                book_id=book[0],
+                isbn=book[1],
+                author=book[2],
+                title=book[3],
+                pages=book[4],
+            )
+            for book in books
+        ]
         return books
     except sqlite3.Error as e:
         return {"message": f"SQL Fehler: {e}"}
@@ -58,12 +66,16 @@ def read_book(id: int, con: sqlite3.Connection = Depends(get_con)):
     cursor = con.cursor()
 
     try:
-        book = cursor.execute("""
+        book = cursor.execute(
+            """
                 SELECT * FROM buch
                 WHERE book_id = ?
             """,
-            [id]).fetchall()
-        book = BookGet(book_id=book[0], isbn=book[1], author=book[2], title=book[3], pages=book[4])
+            [id],
+        ).fetchall()
+        book = BookGet(
+            book_id=book[0], isbn=book[1], author=book[2], title=book[3], pages=book[4]
+        )
         return book
     except sqlite3.Error as e:
         return {"message": f"SQL Fehler: {e}"}
@@ -72,17 +84,19 @@ def read_book(id: int, con: sqlite3.Connection = Depends(get_con)):
         cursor.close()
         con.close()
 
+
 @app.post("/books/{id}", status_code=201)
 def post_book(book: Book, con: sqlite3.Connection = Depends(get_con)):
     """Buch hinzufügen"""
     cursor = con.cursor()
 
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
                 INSERT INTO buch (book_id, isbn, author, title, pages)
                     VALUES (?, ?, ?, ?, ?)
             """,
-            (id, book.isbn, book.author, book.title, book.pages)
+            (id, book.isbn, book.author, book.title, book.pages),
         )
         con.commit()
         result = {"added": book}
@@ -94,9 +108,9 @@ def post_book(book: Book, con: sqlite3.Connection = Depends(get_con)):
         # Egal ob es geklappt hat, die Verbindung am ende wieder schließen
         cursor.close()
         con.close()
-    
+
     return result
-    
+
 
 @app.put("/books/{id}")
 def update_book(id: int, book: Book, con: sqlite3.Connection = Depends(get_con)):
@@ -113,17 +127,21 @@ def update_book(id: int, book: Book, con: sqlite3.Connection = Depends(get_con))
                     pages = ?
                 WHERE book_id = ?
             """,
-            (book.isbn, book.author, book.title, book.pages, id)
+            (book.isbn, book.author, book.title, book.pages, id),
         )
         con.commit()
-        result = {"message": "changed successfully.", "changed book id": id, "new_entry": book}
+        result = {
+            "message": "changed successfully.",
+            "changed book id": id,
+            "new_entry": book,
+        }
     except sqlite3.Error as e:
         con.rollback()
         raise HTTPException(status_code=400, detail=f"SQL Error: {e}")
     finally:
         cursor.close()
         con.close()
-    
+
     return result
 
 
@@ -148,4 +166,5 @@ def delete_book(id: int, con: sqlite3.Connection = Depends(get_con)):
 # Falls das Skript direkt ausgeführt wird, soll uvicorn importiert werden und der Webserver gestartet werden.
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", reload=True, port=8000)
