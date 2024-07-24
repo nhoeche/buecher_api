@@ -17,7 +17,7 @@ class BookGet(Book):
 
 # App erstellen
 app = FastAPI(title="Super Bücher API",
-              description="Made by Datacraft",
+              description="Made by Nils",
               version="0.1")
 
 
@@ -40,13 +40,16 @@ def read_books(con: sqlite3.Connection = Depends(get_con)):
     cursor = con.cursor()  # Cursor erstellen
 
     # Daten abfragen und in Dictionary umwandeln (damit wir json mit Schlüsselnamen zurückgeben)
-    books = cursor.execute("SELECT * FROM buch").fetchall()
-    books = [BookGet(book_id=book[0], isbn=book[1], author=book[2], title=book[3], pages=book[4]) for book in books]
-
-    # Verbindung schließen
-    cursor.close()
-    con.close()
-    return books
+    try:
+        books = cursor.execute("SELECT * FROM buch").fetchall()
+        books = [BookGet(book_id=book[0], isbn=book[1], author=book[2], title=book[3], pages=book[4]) for book in books]
+        return books
+    except sqlite3.Error as e:
+        return {"message": f"SQL Fehler: {e}"}
+    finally:
+        # Verbindung schließen
+        cursor.close()
+        con.close()
 
 
 @app.get("/books/{id}")
@@ -54,25 +57,27 @@ def read_book(id: int, con: sqlite3.Connection = Depends(get_con)):
     """Bestimmtes Buch zurückgeben"""
     cursor = con.cursor()
 
-    book = cursor.execute("""
-            SELECT * FROM buch
-            WHERE book_id = ?
-        """,
-        [id]).fetchall()
-    book = BookGet(book_id=book[0], isbn=book[1], author=book[2], title=book[3], pages=book[4])
-
-    cursor.close()
-    con.close()
-    return book
-
+    try:
+        book = cursor.execute("""
+                SELECT * FROM buch
+                WHERE book_id = ?
+            """,
+            [id]).fetchall()
+        book = BookGet(book_id=book[0], isbn=book[1], author=book[2], title=book[3], pages=book[4])
+        return book
+    except sqlite3.Error as e:
+        return {"message": f"SQL Fehler: {e}"}
+    finally:
+        # Verbindung schließen
+        cursor.close()
+        con.close()
 
 @app.post("/books/{id}", status_code=201)
 def post_book(book: Book, con: sqlite3.Connection = Depends(get_con)):
     """Buch hinzufügen"""
     cursor = con.cursor()
 
-    # Ab hier mit Error handling (könnte oben ergänzt werden)
-    try:  # Versuche einzutragen...
+    try:
         cursor.execute("""
                 INSERT INTO buch (book_id, isbn, author, title, pages)
                     VALUES (?, ?, ?, ?, ?)
@@ -99,17 +104,19 @@ def update_book(id: int, book: Book, con: sqlite3.Connection = Depends(get_con))
     cursor = con.cursor()
 
     try:
-        cursor.execute("""
-            UPDATE buch
-            SET isbn = ?,
-                author = ? ,
-                title = ?,
-                pages = ?
-            WHERE book_id = ?
-        """,
-        (book.isbn, book.author, book.title, book.pages, id)).fetchall()
+        cursor.execute(
+            """
+                UPDATE buch
+                SET isbn = ?,
+                    author = ? ,
+                    title = ?,
+                    pages = ?
+                WHERE book_id = ?
+            """,
+            (book.isbn, book.author, book.title, book.pages, id)
+        )
         con.commit()
-        result = {"changed": id, "new": book}
+        result = {"message": "changed successfully.", "changed book id": id, "new_entry": book}
     except sqlite3.Error as e:
         con.rollback()
         raise HTTPException(status_code=400, detail=f"SQL Error: {e}")
