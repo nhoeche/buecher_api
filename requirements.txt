@@ -1,14 +1,14 @@
-annotated-types @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_1fa2djihwb/croot/annotated-types_1709542925772/work
-anyio @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a17a7759g2/croot/anyio_1706220182417/work
-click @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/click_1699237822453/work
-fastapi @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/fastapi_1707342262375/work
-h11 @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_110bmw2coo/croot/h11_1706652289620/work
-idna @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a12xpo84t2/croot/idna_1714398852854/work
-pydantic @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_0ai8cvgm2c/croot/pydantic_1709577986211/work
-pydantic_core @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_06smitnu98/croot/pydantic-core_1709573985903/work
+annotated-types
+anyio
+click
+fastapi
+h11
+idna
+pydantic
+pydantic_core
 setuptools==69.5.1
-sniffio @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_1573pknjrg/croot/sniffio_1705431298885/work
-starlette @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/starlette-recipe_1707341642137/work
-typing_extensions @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_93dg13ilv4/croot/typing_extensions_1715268840722/work
-uvicorn @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/uvicorn-split_1699284626477/work
+sniffio
+starlette
+typing_extensions
+uvicorn
 wheel==0.43.0
