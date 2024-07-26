@@ -2,22 +2,60 @@ import sqlite3
 from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
 
+# Beschreibung
+description="""Eine FastAPI zum Verwalten einer SQLite Bücherdatenbank. 
+
+Die API dient als Beispiel für Einsteiger.
+Datenbank wird periodisch zurückgesetzt.
+Informationen über Bücher können abgerufen, eingetragen,
+geändert oder gelöscht werden.
+
+Datenstruktur eines Buchs: 
+```json
+{
+    "isbn": "978-3518380239",
+    "author": "Thomas Bernhard",
+    "title": "Holzfällen. Eine Erregung",
+    "pages": 336,
+    "book_id": 2
+}
+```
+
+Made by Nils
+"""
 
 # pydantic Datenmodell ohne ID (zum posten)
 class Book(BaseModel):
-    isbn: str
-    author: str
-    title: str
-    pages: int | None
+    isbn: str = '123-4567890123'
+    author: str = 'Max Mustermann'
+    title: str = 'Ein Buch'
+    pages: int | None = 700
 
 
 # mit ID (zum Abfragen)
 class BookGet(Book):
-    book_id: int
+    book_id: int = 100
+
+
+class Message(BaseModel):
+    message: str = 'success'
+
+
+class MessagePost(Message):
+    new_id: int
+    new_data: Book
+
+
+class MessageDelete(Message):
+    deleted_id: int
 
 
 # App erstellen
-app = FastAPI(title="Super Bücher API", description="Made by Nils", version="0.1")
+app = FastAPI(
+    title="Super Bücher API",
+    description=description,
+    version="0.1",
+)
 
 
 # Funktion zum SQL-Verbindung generieren
@@ -27,13 +65,13 @@ def get_con():
 
 # ENDPUNKTE
 @app.get("/")
-def read_root():
+def read_root() -> Message:
     """User Begrüßung."""
-    return {"message": "Hello User!"}
+    return Message(message="Hello User!")
 
 
 @app.get("/books")
-def read_books(con: sqlite3.Connection = Depends(get_con)):
+def read_books(con: sqlite3.Connection = Depends(get_con)) -> list[BookGet]:
     """Alle Bücher zurückgeben."""
     cursor = con.cursor()  # Cursor erstellen
 
@@ -53,7 +91,7 @@ def read_books(con: sqlite3.Connection = Depends(get_con)):
         ]
         return books
     except sqlite3.Error as e:
-        return {"message": f"SQL Fehler: {e}"}
+        raise HTTPException(500, f"SQL Fehler: {e}")
     finally:
         # Verbindung schließen
         cursor.close()
@@ -61,7 +99,7 @@ def read_books(con: sqlite3.Connection = Depends(get_con)):
 
 
 @app.get("/books/{id}")
-def read_book(id: int, con: sqlite3.Connection = Depends(get_con)):
+def read_book(id: int, con: sqlite3.Connection = Depends(get_con)) -> BookGet:
     """Bestimmtes Buch zurückgeben"""
     cursor = con.cursor()
 
@@ -77,13 +115,17 @@ def read_book(id: int, con: sqlite3.Connection = Depends(get_con)):
         if book:
             # Falls Buch gefunden, in Pydantic-Instanz umwandeln
             book = BookGet(
-                book_id=book[0], isbn=book[1], author=book[2], title=book[3], pages=book[4]
+                book_id=book[0],
+                isbn=book[1],
+                author=book[2],
+                title=book[3],
+                pages=book[4]
             )
             return book
         else:
-            return {"message": "Buch nicht gefunden."}
+            raise HTTPException(404, f"Book with id {id} not found.")
     except sqlite3.Error as e:
-        return {"message": f"SQL Fehler: {e}"}
+        raise HTTPException(500, f"SQL Fehler: {e}")
     finally:
         # Verbindung schließen
         cursor.close()
@@ -91,7 +133,8 @@ def read_book(id: int, con: sqlite3.Connection = Depends(get_con)):
 
 
 @app.post("/books/{id}", status_code=201)
-def post_book(book: Book, con: sqlite3.Connection = Depends(get_con)):
+def post_book(book: Book,
+              con: sqlite3.Connection = Depends(get_con)) -> MessagePost:
     """Buch hinzufügen"""
     cursor = con.cursor()
 
@@ -104,7 +147,10 @@ def post_book(book: Book, con: sqlite3.Connection = Depends(get_con)):
             (id, book.isbn, book.author, book.title, book.pages),
         )
         con.commit()
-        result = {"added": book}
+        result = MessagePost(message="Book created successfully.",
+                             new_id=id,
+                             new_data=book)
+        return result
     except sqlite3.Error as e: 
         con.rollback() 
         # JSON-Fehlermeldung zurückgeben
@@ -115,8 +161,6 @@ def post_book(book: Book, con: sqlite3.Connection = Depends(get_con)):
         # Egal ob es geklappt hat, die Verbindung am Ende wieder schließen
         cursor.close()
         con.close()
-
-    return result
 
 
 @app.put("/books/{id}")
@@ -144,7 +188,7 @@ def update_book(id: int, book: Book, con: sqlite3.Connection = Depends(get_con))
         }
     except sqlite3.Error as e:
         con.rollback()
-        raise HTTPException(status_code=400, detail=f"SQL Error: {e}")
+        raise HTTPException(status_code=500, detail=f"SQL Error: {e}")
     finally:
         cursor.close()
         con.close()
@@ -159,10 +203,13 @@ def delete_book(id: int, con: sqlite3.Connection = Depends(get_con)):
     try:
         cursor.execute("DELETE FROM buch WHERE book_id = ?", [id])
         con.commit()
-        result = {"deleted": id}
+        result = MessageDelete(
+            message="Book deleted successfully.",
+            deleted_id=id
+        )
     except sqlite3.Error as e:
         con.rollback()
-        raise HTTPException(status_code=400, detail=f"SQL Error: {e}")
+        raise HTTPException(status_code=500, detail=f"SQL Error: {e}")
     finally:
         cursor.close()
         con.close()
